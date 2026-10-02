@@ -464,6 +464,40 @@ kbd{
 }
 </style>
 
+
+<style>
+#touchBar{display:none}
+@media (pointer: coarse), (max-width: 1100px){
+  body{overscroll-behavior:none}
+  #topbar{
+    position:fixed;top:0;left:0;right:0;z-index:80;height:54px;min-height:54px;
+    padding:5px 8px;gap:6px;background:rgba(20,20,20,.96);backdrop-filter:blur(14px)
+  }
+  #topbar #swapBtn,#topbar #exportPdfBtn,#topbar #deleteAnnotationBtn,
+  #topbar #fullscreenBtn,#topbar #viewModeBtn,#topbar #navHint,#topbar #status{display:none!important}
+  #topbar button{min-height:42px;border-radius:10px;font-size:15px;padding:7px 12px}
+  #layout{height:100dvh!important;padding-top:54px;padding-bottom:78px;box-sizing:border-box}
+  #touchBar{
+    display:flex;position:fixed;left:max(8px,env(safe-area-inset-left));
+    right:max(8px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));
+    z-index:100;height:64px;align-items:stretch;justify-content:space-between;gap:4px;padding:6px;
+    border:1px solid rgba(255,255,255,.13);border-radius:16px;background:rgba(28,28,28,.94);
+    box-shadow:0 8px 30px rgba(0,0,0,.38);backdrop-filter:blur(18px)
+  }
+  #touchBar button{appearance:none;flex:1 1 0;min-width:62px;border:0;border-radius:11px;
+    background:transparent;color:#eee;font:inherit;touch-action:manipulation}
+  #touchBar button:active{background:rgba(255,255,255,.12)}
+  #touchBar button span{display:block;height:27px;line-height:27px;font-size:23px;font-weight:650}
+  #touchBar button small{display:block;font-size:11px;line-height:15px;white-space:nowrap;color:#bbb}
+  #touchHighlight span{color:#f1d94d} #touchUnderline span{color:#ef6666} #touchSave span{color:#8fc8ff}
+  #noteEditor{position:fixed!important;left:50%!important;right:auto!important;top:auto!important;
+    bottom:calc(86px + env(safe-area-inset-bottom))!important;transform:translateX(-50%);
+    width:min(620px,calc(100vw - 28px))!important;max-width:none!important;z-index:140!important;
+    border-radius:16px!important;box-shadow:0 14px 45px rgba(0,0,0,.5)!important}
+  #noteEditor textarea{min-height:120px;font-size:17px!important}
+}
+</style>
+
 </head>
 <body class="sentence-mode">
 <div id="topbar">
@@ -478,6 +512,17 @@ kbd{
   <span class="optional" id="navHint">↑/↓ sentence · Shift+↑/↓ select · ←/→ paragraph/page · H highlight · U underline · N note · D delete · F fullscreen</span>
   <div class="spacer"></div>
   <span id="status">No file loaded</span>
+</div>
+
+
+<div id="touchBar" aria-label="Reading controls">
+  <button id="touchPrev"><span>↑</span><small>Previous</small></button>
+  <button id="touchHighlight"><span>▰</span><small>Highlight</small></button>
+  <button id="touchNote"><span>✎</span><small>Comment</small></button>
+  <button id="touchUnderline"><span>U</span><small>Underline</small></button>
+  <button id="touchDelete"><span>⌫</span><small>Delete</small></button>
+  <button id="touchNext"><span>↓</span><small>Next</small></button>
+  <button id="touchSave"><span>⇧</span><small>Save PDF</small></button>
 </div>
 
 <div id="settings">
@@ -1288,19 +1333,22 @@ async function exportAnnotatedPdf(){
     });
 
     const blob=new Blob([savedBytes],{type:'application/pdf'});
-    const url=URL.createObjectURL(blob);
-
-    const a=document.createElement('a');
     const dot=currentFileName.lastIndexOf('.');
     const base=dot>0 ? currentFileName.slice(0,dot) : currentFileName;
-    a.href=url;
-    a.download=`${base}_annotated.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const outName=`${base}_annotated.pdf`;
+    const outFile=new File([blob],outName,{type:'application/pdf'});
 
-    setTimeout(()=>URL.revokeObjectURL(url),1500);
-    statusEl.textContent=`Exported ${annotations.length} PDF highlight${annotations.length===1?'':'s'}`;
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[outFile]})){
+      await navigator.share({files:[outFile],title:outName});
+      statusEl.textContent=`Ready to save ${outName}`;
+    }else{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=outName;
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+      statusEl.textContent=`Exported ${annotations.length} PDF annotation${annotations.length===1?'':'s'}`;
+    }
   }catch(err){
     console.error(err);
     statusEl.textContent='Could not export annotated PDF';
@@ -2083,6 +2131,7 @@ async function openPdf(file){
 
     renderPdfSource(false);
     await renderPdfPage(1);
+    if(window.matchMedia('(pointer: coarse)').matches) setPaneViewMode('reader');
   }catch(err){
     console.error(err);
     empty.style.display='flex';
@@ -2337,6 +2386,28 @@ window.addEventListener('drop',e=>{
     openFile(f);
   }
 });
+
+
+const touchPrev=document.getElementById('touchPrev');
+const touchNext=document.getElementById('touchNext');
+const touchHighlight=document.getElementById('touchHighlight');
+const touchUnderline=document.getElementById('touchUnderline');
+const touchNote=document.getElementById('touchNote');
+const touchDelete=document.getElementById('touchDelete');
+const touchSave=document.getElementById('touchSave');
+touchPrev.addEventListener('click',()=>step(-1));
+touchNext.addEventListener('click',()=>step(1));
+touchHighlight.addEventListener('click',()=>toggleCurrentYellowHighlight({openNote:false}));
+touchUnderline.addEventListener('click',()=>toggleCurrentRedUnderline({openNote:false}));
+touchNote.addEventListener('click',()=>{
+  if(mode!=='pdf') return;
+  const els=selectedUnits();
+  if(!els.some(el=>pdfAnnotations.get(currentUnitHighlightKey(el))))
+    toggleCurrentYellowHighlight({openNote:false});
+  openAnnotationNoteEditor(els);
+});
+touchDelete.addEventListener('click',deleteCurrentAnnotation);
+touchSave.addEventListener('click',exportAnnotatedPdf);
 
 window.addEventListener('keydown',e=>{
   if(!annotationNoteBox.classList.contains('hidden')){

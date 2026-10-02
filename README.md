@@ -1,3 +1,17 @@
+# Focus Reader PWA
+
+## Publish with GitHub Pages
+
+1. Create a new GitHub repository, for example `focus-reader`.
+2. Upload **all files and folders in this package** to the repository root.
+3. In the repository, open **Settings → Pages**.
+4. Under **Build and deployment**, choose **Deploy from a branch**.
+5. Select `main` and `/(root)`, then click **Save**.
+6. After GitHub finishes deploying, open the Pages URL shown in Settings → Pages.
+
+For a project repository named `focus-reader`, the URL normally has the form:
+`https://YOUR-USERNAME.github.io/focus-reader/`
+
 ## Install on iPad
 
 1. Open the GitHub Pages URL in Safari.
@@ -15,3 +29,9 @@ GitHub Pages redeploys after the commit.
 
 Note: ordinary GitHub Pages sites are publicly reachable. Do not put PDFs,
 annotations, credentials, or other private data in this repository.
+
+## iPad interface
+Touch devices use a fixed bottom reading bar: Previous, Highlight, Comment,
+Underline, Delete, Next, and Save PDF. PDFs open Reader-first on touch devices.
+Save PDF uses the iOS share sheet when available; choose Save to Files to store
+the annotated copy in iCloud Drive, On My iPad, OneDrive, or another Files provider.

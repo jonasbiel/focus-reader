@@ -1,4 +1,4 @@
-const CACHE = 'focus-reader-v1';
+const CACHE = 'focus-reader-v2-ios';
 const APP_ASSETS = [
   './',
   './index.html',
