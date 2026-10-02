@@ -1,7 +1,7 @@
 {
   "name": "Focus Reader",
   "short_name": "Focus Reader",
-  "description": "A focused academic PDF and text reader.",
+  "description": "Focused PDF reading and annotation",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

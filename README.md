@@ -1,37 +1,19 @@
-# Focus Reader PWA
+# Focus Reader — iPad PWA
 
-## Publish with GitHub Pages
+Upload everything in this folder to the root of the existing GitHub Pages repository.
 
-1. Create a new GitHub repository, for example `focus-reader`.
-2. Upload **all files and folders in this package** to the repository root.
-3. In the repository, open **Settings → Pages**.
-4. Under **Build and deployment**, choose **Deploy from a branch**.
-5. Select `main` and `/(root)`, then click **Save**.
-6. After GitHub finishes deploying, open the Pages URL shown in Settings → Pages.
+## iPad workflow
+- Open PDF from Files.
+- Reader occupies the full working area.
+- Swipe up/down or use Previous/Next to move sentence-by-sentence.
+- Highlight, underline, comment, or delete from the bottom toolbar.
+- Tap PDF to inspect the source page; tap Reader to return.
+- Tap Save PDF to create the annotated PDF. On iPadOS the native share sheet
+  opens; choose Save to Files to save to iCloud Drive, On My iPad, OneDrive, etc.
 
-For a project repository named `focus-reader`, the URL normally has the form:
-`https://YOUR-USERNAME.github.io/focus-reader/`
+The original PDF is not silently overwritten.
 
-## Install on iPad
-
-1. Open the GitHub Pages URL in Safari.
-2. Tap Share.
-3. Choose **Add to Home Screen**.
-4. Launch Focus Reader from the new Home Screen icon.
-
-The PDF itself is selected from Files and processed in the browser. This package
-does not contain or upload your PDFs.
-
-## Updating Focus Reader
-
-Replace `index.html` (and, when changed, the other PWA files) in the repository.
-GitHub Pages redeploys after the commit.
-
-Note: ordinary GitHub Pages sites are publicly reachable. Do not put PDFs,
-annotations, credentials, or other private data in this repository.
-
-## iPad interface
-Touch devices use a fixed bottom reading bar: Previous, Highlight, Comment,
-Underline, Delete, Next, and Save PDF. PDFs open Reader-first on touch devices.
-Save PDF uses the iOS share sheet when available; choose Save to Files to store
-the annotated copy in iCloud Drive, On My iPad, OneDrive, or another Files provider.
+## Updating an installed PWA
+After GitHub Pages finishes deploying, fully close Focus Reader and reopen it.
+If iPadOS keeps an old cached build, remove the Home Screen app once, visit the
+Pages URL in Safari, and Add to Home Screen again.
