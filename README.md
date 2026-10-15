@@ -3,7 +3,7 @@
 Upload everything in this folder to the root of the existing GitHub Pages repository.
 
 ## iPad workflow
-- Open PDF from Files.
+- Open PDF, EPUB, or Markdown (`.md` / `.markdown`) from Files.
 - Reader occupies the full working area.
 - Swipe up/down or use Previous/Next to move sentence-by-sentence.
 - Highlight, underline, comment, or delete from the bottom toolbar.
@@ -12,6 +12,24 @@ Upload everything in this folder to the root of the existing GitHub Pages reposi
   opens; choose Save to Files to save to iCloud Drive, On My iPad, OneDrive, etc.
 
 The original PDF is not silently overwritten.
+
+## EPUB and Markdown
+
+EPUB and Markdown are converted locally in the browser to a searchable A4 PDF,
+then opened in the same reader as ordinary PDFs. Highlight, underline, and
+comment as usual. Save PDF works with or without annotations; exports always
+use the `.pdf` extension. Source files are never overwritten or uploaded.
+
+EPUB chapters follow the book's spine reading order. This is a text-focused
+conversion: headings and paragraphs are retained, but original page layouts,
+images (other than EPUB alternative text), and rich formatting are not reproduced.
+DRM-protected and image-only EPUBs are unsupported. The bundled Noto Sans font
+supports Latin, Greek, and Cyrillic text; unsupported characters produce an error
+instead of silently disappearing. The font license is in `assets/OFL.txt`.
+
+The first import requires internet access for the conversion libraries. Once
+loaded and cached, those resources are available offline. Deploy `book-import.js`
+and the `assets` folder along with the other app files.
 
 ## Updating an installed PWA
 After GitHub Pages finishes deploying, fully close Focus Reader and reopen it.

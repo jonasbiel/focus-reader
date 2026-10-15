@@ -1,9 +1,11 @@
-const CACHE='focus-reader-ipad-v3';
-const LOCAL=['./','./index.html','./manifest.webmanifest','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE='focus-reader-ipad-v4';
+const LOCAL=['./','./index.html','./book-import.js','./assets/NotoSans-Regular.ttf','./assets/NotoSans-Bold.ttf','./manifest.webmanifest','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png'];
 const LIBS=[
 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs',
 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs',
-'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm'
+'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm',
+'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/+esm',
+'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm'
 ];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(async c=>{
  await c.addAll(LOCAL); await Promise.allSettled(LIBS.map(u=>c.add(u))); return self.skipWaiting();

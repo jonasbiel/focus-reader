@@ -598,7 +598,7 @@ html.ipad-ui #noteEditor textarea{min-height:130px!important;font-size:17px!impo
 
 
 <div id="ipadTopbar">
-  <button id="ipadOpen">Open PDF</button>
+  <button id="ipadOpen">Open file</button>
   <div id="ipadTitle">Focus Reader</div>
   <div class="ipadTopActions">
     <button id="ipadPdfToggle">PDF</button>
@@ -672,7 +672,7 @@ html.ipad-ui #noteEditor textarea{min-height:130px!important;font-size:17px!impo
 </div>
 
 <input id="fileInput" type="file"
-  accept=".pdf,.md,.markdown,.qmd,.html,.htm,.txt,application/pdf,text/markdown,text/html,text/plain">
+  accept=".pdf,.epub,.md,.markdown,.qmd,.html,.htm,.txt,application/pdf,application/epub+zip,text/markdown,text/html,text/plain">
 
 <div id="layout">
   <section id="readerPane">
@@ -682,7 +682,8 @@ html.ipad-ui #noteEditor textarea{min-height:130px!important;font-size:17px!impo
     <div id="empty">
       <div id="emptyCard">
         <h2>Focus Reader</h2>
-        <p>Drop a <b>PDF</b> for split-view reading, or a <b>Markdown/QMD/HTML/TXT</b> file for the single-pane reader.</p>
+        <p>Open a <b>PDF, EPUB, or Markdown</b> file to read, annotate, and save as PDF. EPUB and Markdown are converted to a text-focused PDF.</p>
+        <p>QMD, HTML, and TXT files also open in the text reader.</p>
         <p><kbd>↑</kbd>/<kbd>↓</kbd> navigate &nbsp; <kbd>←</kbd>/<kbd>→</kbd> paragraph or PDF page &nbsp; <kbd>F</kbd> full screen</p>
       </div>
     </div>
@@ -710,6 +711,7 @@ html.ipad-ui #noteEditor textarea{min-height:130px!important;font-size:17px!impo
 </div>
 
 <script type="module">
+import {epubBlocks,blocksToPdf} from './book-import.js';
 const PDFJS_URL='https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
 const PDFJS_WORKER_URL='https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 const PDFLIB_URL='https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm';
@@ -1329,10 +1331,6 @@ async function exportAnnotatedPdf(){
   }
 
   const annotations=annotationUnits();
-  if(!annotations.length){
-    statusEl.textContent='No saved highlights to export';
-    return;
-  }
 
   const oldLabel=exportPdfBtn.textContent;
   exportPdfBtn.disabled=true;
@@ -2157,9 +2155,13 @@ function cleanLinesToBlocks(lines,repeatedEdgeLines){
   return blocks;
 }
 
-async function openPdf(file){
+async function openPdf(file,sourceFile=file){
   mode='pdf';
-  currentFileName=file.name;
+  currentFileName=sourceFile.name;
+  clearRangeSelection();
+  closeAnnotationNoteEditor();
+  document.documentElement.classList.remove('pdf-preview');
+  ipadPdfToggle.textContent='PDF';
   empty.style.display='none';
   loading.style.display='flex';
   layout.classList.add('pdf-mode');
@@ -2178,7 +2180,7 @@ async function openPdf(file){
     if(pdfUrl) URL.revokeObjectURL(pdfUrl);
     pdfUrl=URL.createObjectURL(file);
 
-    currentPdfFileKey=`focusReaderPdfAnnotations:${file.name}:${file.size}:${file.lastModified}`;
+    currentPdfFileKey=`focusReaderPdfAnnotations:${sourceFile.name}:${sourceFile.size}:${sourceFile.lastModified}`;
     loadPdfAnnotations();
 
     pdfDoc=await lib.getDocument({data:new Uint8Array(buffer.slice(0))}).promise;
@@ -2267,7 +2269,20 @@ async function openTextFile(file){
 
 async function openFile(file){
   if(!file) return;
+  if(openFile.busy) return;
+  openFile.busy=true;
+  try{
   const name=file.name.toLowerCase();
+  if(name.endsWith('.epub') || file.type==='application/epub+zip' || /\.(md|markdown)$/.test(name) || file.type==='text/markdown'){
+    loading.style.display='flex';
+    statusEl.textContent='Preparing PDF…';
+    const blocks=name.endsWith('.epub') || file.type==='application/epub+zip'
+      ? await epubBlocks(await file.arrayBuffer())
+      : parseTextBlocks(await file.text());
+    const bytes=await blocksToPdf(blocks,file.name);
+    await openPdf(new File([bytes],file.name.replace(/\.[^.]+$/,'')+'.pdf',{type:'application/pdf'}),file);
+    return;
+  }
   if(file.type==='application/pdf'||name.endsWith('.pdf')){
     await openPdf(file);
     return;
@@ -2280,6 +2295,15 @@ async function openFile(file){
   }
 
   statusEl.textContent='Unsupported file type';
+  }catch(err){
+    console.error(err);
+    statusEl.textContent='Could not open file';
+    alert(String(err?.message||err));
+  }finally{
+    loading.style.display='none';
+    openFile.busy=false;
+    fileInput.value='';
+  }
 }
 
 function applyPaneLayout(){
@@ -2521,11 +2545,11 @@ ipadPdfToggle.addEventListener('click',()=>{
   const showingPdf=document.documentElement.classList.toggle('pdf-preview');
   ipadPdfToggle.textContent=showingPdf?'Reader':'PDF';
   if(showingPdf) setTimeout(()=>renderPdfPage(currentPdfPage),40);
-  else setTimeout(()=>{measureLineView();updateFocus();},40);
+  else setTimeout(()=>focusCurrent(false),40);
 });
 
 ipadSettings.addEventListener('click',()=>{
-  settingsEl.classList.toggle('hidden');
+  settings.style.display=settings.style.display==='block'?'none':'block';
 });
 
 // Swipe vertically anywhere in the reader: up = next, down = previous.
