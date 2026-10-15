@@ -2279,8 +2279,16 @@ async function openFile(file){
     const blocks=name.endsWith('.epub') || file.type==='application/epub+zip'
       ? await epubBlocks(await file.arrayBuffer())
       : parseTextBlocks(await file.text());
-    const bytes=await blocksToPdf(blocks,file.name);
+    let missingCharacters=[];
+    const bytes=await blocksToPdf(blocks,file.name,{
+      onMissingCharacters:characters=>{missingCharacters=characters;}
+    });
     await openPdf(new File([bytes],file.name.replace(/\.[^.]+$/,'')+'.pdf',{type:'application/pdf'}),file);
+    if(missingCharacters.length){
+      alert('The book was converted, but some characters are not supported by the PDF font. They are marked in the text and exported PDF with codes such as [U+1F600].\n\n'+
+        'Affected characters: '+missingCharacters.slice(0,20).join(', ')+
+        (missingCharacters.length>20?' (and more)':''));
+    }
     return;
   }
   if(file.type==='application/pdf'||name.endsWith('.pdf')){

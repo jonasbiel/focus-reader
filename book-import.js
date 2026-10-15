@@ -42,7 +42,7 @@ export async function epubBlocks(buffer){
     let text='';
     let heading=false;
     const flush=()=>{
-      const value=text.replace(/\s+/g,' ').trim();
+      const value=text.replace(/[\u00ad\u200b\u2060\ufeff]/g,'').replace(/\s+/g,' ').trim();
       if(value) blocks.push({text:value,heading});
       text='';
     };
@@ -66,7 +66,23 @@ export async function epubBlocks(buffer){
   return blocks;
 }
 
-export async function blocksToPdf(blocks,title){
+export function preparePdfText(value,supported,missing=new Set()){
+  // EPUBs often contain discretionary hyphens and invisible layout controls.
+  // They do not need glyphs in the newly laid-out PDF.
+  const text=value.normalize('NFC')
+    .replace(/[\u00ad\u200b\u2060\ufeff]/g,'')
+    .replace(/[\u0000-\u001f\u007f\s]/g,' ');
+  return [...text].map(ch=>{
+    if(supported.has(ch.codePointAt(0))) return ch;
+    const code=`U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')}`;
+    missing.add(code);
+    // Preserve an explicit, searchable identifier instead of dropping text
+    // or preventing the rest of the book from opening.
+    return `[${code}]`;
+  }).join('');
+}
+
+export async function blocksToPdf(blocks,title,{onMissingCharacters=()=>{}}={}){
   if(!blocks.length) throw new Error('No readable text was found in this file.');
   const [{PDFDocument,rgb},{default:fontkit}]=await Promise.all([import(PDFLIB_URL),import(FONTKIT_URL)]);
   const doc=await PDFDocument.create();
@@ -77,6 +93,8 @@ export async function blocksToPdf(blocks,title){
     if(!response.ok) throw new Error('Could not load the PDF font. Please reconnect and try again.');
     return doc.embedFont(await response.arrayBuffer(),{subset:true});
   }));
+  const characterSets=fonts.map(font=>new Set(font.getCharacterSet()));
+  const missing=new Set();
   const width=595.28,height=841.89,margin=54;
   let page,y;
   function newPage(){page=doc.addPage([width,height]);y=height-margin;}
@@ -84,10 +102,7 @@ export async function blocksToPdf(blocks,title){
   for(const block of blocks){
     const font=fonts[block.heading?1:0],size=block.heading?17:11;
     const lineHeight=size*1.5;
-    const text=block.text.replace(/[\u0000-\u001f\u007f]/g,' ').normalize('NFC');
-    const supported=new Set(font.getCharacterSet());
-    if([...text].some(ch=>!supported.has(ch.codePointAt(0))))
-      throw new Error('This book contains characters the PDF font cannot display. No text has been silently removed.');
+    const text=preparePdfText(block.text,characterSets[block.heading?1:0],missing);
     if(block.heading && y<margin+lineHeight*3) newPage();
     let line='';
     function draw(){
@@ -108,5 +123,7 @@ export async function blocksToPdf(blocks,title){
     }
     draw();y-=block.heading?10:8;
   }
-  return doc.save();
+  const bytes=await doc.save();
+  if(missing.size) onMissingCharacters([...missing]);
+  return bytes;
 }

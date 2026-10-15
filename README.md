@@ -24,8 +24,11 @@ EPUB chapters follow the book's spine reading order. This is a text-focused
 conversion: headings and paragraphs are retained, but original page layouts,
 images (other than EPUB alternative text), and rich formatting are not reproduced.
 DRM-protected and image-only EPUBs are unsupported. The bundled Noto Sans font
-supports Latin, Greek, and Cyrillic text; unsupported characters produce an error
-instead of silently disappearing. The font license is in `assets/OFL.txt`.
+supports Latin, Greek, and Cyrillic text. Invisible EPUB layout characters are
+normalized during conversion. Unsupported visible characters are replaced with
+searchable Unicode markers such as `[U+1F600]`, with a notice listing the affected
+codes, so the rest of the book can still be read and exported. These markers are
+also present in the exported PDF. The font license is in `assets/OFL.txt`.
 
 The first import requires internet access for the conversion libraries. Once
 loaded and cached, those resources are available offline. Deploy `book-import.js`
