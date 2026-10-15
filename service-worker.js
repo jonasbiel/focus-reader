@@ -1,5 +1,5 @@
-const CACHE='focus-reader-ipad-v5';
-const LOCAL=['./','./index.html','./book-import.js','./assets/NotoSans-Regular.ttf','./assets/NotoSans-Bold.ttf','./manifest.webmanifest','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE='focus-reader-ipad-v6';
+const LOCAL=['./','./index.html','./book-import.js','./assets/NotoSans-Regular.ttf','./assets/NotoSans-Bold.ttf','./assets/NotoSansMath-Regular.ttf','./manifest.webmanifest','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png'];
 const LIBS=[
 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs',
 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs',

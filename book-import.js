@@ -94,6 +94,18 @@ export async function blocksToPdf(blocks,title,{onMissingCharacters=()=>{}}={}){
     return doc.embedFont(await response.arrayBuffer(),{subset:true});
   }));
   const characterSets=fonts.map(font=>new Set(font.getCharacterSet()));
+  // Load the fallback only for books that need glyphs beyond Noto Sans.
+  const needsFallback=blocks.some(block=>[...block.text.normalize('NFC')]
+    .some(ch=>!/[\s\u00ad\u200b\u2060\ufeff\u0000-\u001f\u007f]/.test(ch) &&
+      !characterSets[block.heading?1:0].has(ch.codePointAt(0))));
+  let mathFont=null;
+  if(needsFallback){
+    const response=await fetch(new URL('./assets/NotoSansMath-Regular.ttf',import.meta.url));
+    if(!response.ok) throw new Error('Could not load the mathematical PDF font. Please reconnect and try again.');
+    mathFont=await doc.embedFont(await response.arrayBuffer(),{subset:true});
+  }
+  const mathCharacters=new Set(mathFont?.getCharacterSet()||[]);
+  const supportedSets=characterSets.map(set=>new Set([...set,...mathCharacters]));
   const missing=new Set();
   const width=595.28,height=841.89,margin=54;
   let page,y;
@@ -102,22 +114,39 @@ export async function blocksToPdf(blocks,title,{onMissingCharacters=()=>{}}={}){
   for(const block of blocks){
     const font=fonts[block.heading?1:0],size=block.heading?17:11;
     const lineHeight=size*1.5;
-    const text=preparePdfText(block.text,characterSets[block.heading?1:0],missing);
+    const text=preparePdfText(block.text,supportedSets[block.heading?1:0],missing);
+    function runs(value){
+      const result=[];
+      for(const ch of value){
+        const selected=characterSets[block.heading?1:0].has(ch.codePointAt(0))?font:mathFont;
+        const last=result[result.length-1];
+        if(last?.font===selected) last.text+=ch;
+        else result.push({font:selected,text:ch});
+      }
+      return result;
+    }
+    function textWidth(value){
+      return runs(value).reduce((sum,run)=>sum+run.font.widthOfTextAtSize(run.text,size),0);
+    }
     if(block.heading && y<margin+lineHeight*3) newPage();
     let line='';
     function draw(){
       if(!line) return;
       if(y-lineHeight<margin) newPage();
-      page.drawText(line,{x:margin,y:y-size,size,font,color:rgb(.08,.08,.08)});
+      let x=margin;
+      for(const run of runs(line)){
+        page.drawText(run.text,{x,y:y-size,size,font:run.font,color:rgb(.08,.08,.08)});
+        x+=run.font.widthOfTextAtSize(run.text,size);
+      }
       y-=lineHeight;line='';
     }
     for(const word of text.split(/\s+/).filter(Boolean)){
       const candidate=line?`${line} ${word}`:word;
-      if(font.widthOfTextAtSize(candidate,size)<=width-margin*2){line=candidate;continue;}
+      if(textWidth(candidate)<=width-margin*2){line=candidate;continue;}
       draw();
       // Wrap long URLs/words as well as ordinary prose.
       for(const ch of word){
-        if(line && font.widthOfTextAtSize(line+ch,size)>width-margin*2) draw();
+        if(line && textWidth(line+ch)>width-margin*2) draw();
         line+=ch;
       }
     }

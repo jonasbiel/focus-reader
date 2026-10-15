@@ -24,7 +24,9 @@ EPUB chapters follow the book's spine reading order. This is a text-focused
 conversion: headings and paragraphs are retained, but original page layouts,
 images (other than EPUB alternative text), and rich formatting are not reproduced.
 DRM-protected and image-only EPUBs are unsupported. The bundled Noto Sans font
-supports Latin, Greek, and Cyrillic text. Invisible EPUB layout characters are
+supports Latin, Greek, and Cyrillic text, with Noto Sans Math as a fallback for
+mathematical symbols (including minus, mathematical italic chi, and inequalities).
+Invisible EPUB layout characters are
 normalized during conversion. Unsupported visible characters are replaced with
 searchable Unicode markers such as `[U+1F600]`, with a notice listing the affected
 codes, so the rest of the book can still be read and exported. These markers are
