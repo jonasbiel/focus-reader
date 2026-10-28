@@ -1691,7 +1691,7 @@ async function ensurePdfJs(){
 }
 
 
-function extractPageLines(items){
+function extractPageLines(items,skipColumnDetection=false){
   let usable=items
     .filter(x=>typeof x.str==='string' && x.str.trim())
     .map(x=>{
@@ -1747,6 +1747,52 @@ function extractPageLines(items){
       const smallEnough=item.h <= bodyH*1.35;
       return !(isLineNumber && clearlyInMargin && smallEnough);
     });
+  }
+
+  // Separate two-column article text before grouping fragments into lines.
+  // Otherwise PDF.js fragments on the same baseline from opposite columns
+  // are incorrectly fused into one sentence.
+  if(!skipColumnDetection && usable.length>=24){
+    const xMin=Math.min(...usable.map(i=>i.x));
+    const xMax=Math.max(...usable.map(i=>i.x+i.w));
+    const width=xMax-xMin;
+    const middle=(xMin+xMax)/2;
+    const gutter=Math.max(9,width*.035);
+    const left=usable.filter(i=>i.x+i.w<middle-gutter);
+    const right=usable.filter(i=>i.x>middle+gutter);
+    const spanning=usable.filter(i=>!(i.x+i.w<middle-gutter || i.x>middle+gutter));
+    const medianY=arr=>median(arr.map(i=>i.y));
+    // Require substantial text on both sides and a clear central gutter.
+    // A one-column page with long lines should not trigger this mode.
+    const leftRows=new Set(left.map(i=>Math.round(i.y/5)));
+    const rightRows=new Set(right.map(i=>Math.round(i.y/5)));
+    const bothColumns=left.length>=12 && right.length>=12 &&
+      leftRows.size>=7 && rightRows.size>=7 &&
+      Math.abs(medianY(left)-medianY(right))<Math.max(90,width*.5);
+    const crossingBody=spanning.filter(i=>i.w>width*.45);
+    if(bothColumns && crossingBody.length<Math.max(8,usable.length*.12)){
+      // Full-width title/abstract lines are emitted in vertical bands;
+      // column text within each band is read left, then right.
+      const separators=crossingBody
+        .filter(i=>i.w>width*.55)
+        .map(i=>i.y)
+        .sort((a,b)=>b-a);
+      const bands=[Infinity,...separators,-Infinity];
+      const result=[];
+      for(let k=0;k<bands.length-1;k++){
+        const upper=bands[k], lower=bands[k+1];
+        const within=usable.filter(i=>i.y<upper && i.y>lower);
+        const l=within.filter(i=>i.x<middle && i.x+i.w<=middle+gutter);
+        const r=within.filter(i=>i.x>=middle && i.x>middle-gutter);
+        const rest=within.filter(i=>!l.includes(i)&&!r.includes(i));
+        result.push(...extractPageLines(l,true),...extractPageLines(r,true),...extractPageLines(rest,true));
+        if(k<separators.length){
+          const full=usable.filter(i=>i.y===separators[k]);
+          result.push(...extractPageLines(full,true));
+        }
+      }
+      return result;
+    }
   }
 
   usable.sort((a,b)=>{
